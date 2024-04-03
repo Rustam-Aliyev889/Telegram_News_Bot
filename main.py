@@ -1,6 +1,6 @@
 import nltk
-from telegram import Bot, Update, ParseMode
-from telegram.ext import Updater, CommandHandler, CallbackContext, JobQueue
+from telegram import Bot, Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackContext, JobQueue, CallbackQueryHandler
 from newspaper import Article
 import requests
 import configparser
@@ -55,10 +55,31 @@ def summarize_article(url):  # Function to summarize an article given its URL
     
     return article.summary
 
-# Command handler for the '/start' command
 def start(update: Update, context: CallbackContext) -> None:
-    # A greeting message when '/start' command is received
-    update.message.reply_text('Hello! I am your news bot. Type /news ')
+    greeting_message = (
+        "Hello! I am your news bot. I can provide you with the latest top news articles.\n\n"
+        "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
+    )
+    buttons = [
+        [InlineKeyboardButton("Get News 📰", callback_data='get_news')]
+    ]
+    
+    # Creates the keyboard markup
+    reply_markup = InlineKeyboardMarkup(buttons)
+    
+    # Sends the greeting message and buttons
+    update.message.reply_text(
+        greeting_message,
+        reply_markup=reply_markup
+    )
+
+def button_click(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    query.answer()
+    
+    # Handles button clicks based on the callback data
+    if query.data == 'get_news':
+        post_news(update, context)
 
 # Command handler for the '/news' command
 def post_news(update: Update, context: CallbackContext) -> None:
@@ -102,10 +123,14 @@ if __name__ == '__main__':
     job_queue: JobQueue = updater.job_queue
     chat_id = 943389924
 
+    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler('news', post_news))
+    dispatcher.add_handler(CallbackQueryHandler(button_click))
+
     # Schedule for the news posting job to run at 8:00 AM and 5:00 PM UK time
     london_tz = pytz.timezone('Europe/London')
-    job_queue.run_daily(schedule_post_news, time(hour=19, minute=13, tzinfo=london_tz), context=chat_id)
-    job_queue.run_daily(schedule_post_news, time(hour=19, minute=19, tzinfo=london_tz), context=chat_id)
+    job_queue.run_daily(schedule_post_news, time(hour=8, minute=00, tzinfo=london_tz), context=chat_id)
+    job_queue.run_daily(schedule_post_news, time(hour=17, minute=00, tzinfo=london_tz), context=chat_id)
     
     updater.start_polling()
     updater.idle()
