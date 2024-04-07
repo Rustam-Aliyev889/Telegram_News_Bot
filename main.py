@@ -28,6 +28,11 @@ def fetch_news():
     data = response.json()
     return data['articles']   # The list of articles in JSON format
 
+def fetch_category_news(category):
+    url = f'https://newsapi.org/v2/top-headlines?country=gb&category={category}&apiKey={NEWS_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
+    return data['articles']
 
 def summarize_article(url):  # Function to summarize an article given its URL
     article = Article(url)
@@ -61,7 +66,12 @@ def start(update: Update, context: CallbackContext) -> None:
         "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
     )
     buttons = [
-        [InlineKeyboardButton("Get News 📰", callback_data='get_news')]
+        [InlineKeyboardButton("Top News 🇬🇧 ", callback_data='category_general')],
+        [InlineKeyboardButton("Science 🔬", callback_data='category_science')],
+        [InlineKeyboardButton("Technology 💻", callback_data='category_technology')],
+        [InlineKeyboardButton("Health 🏥", callback_data='category_health')],
+        [InlineKeyboardButton("Sport 🏅", callback_data='category_sport')],
+        [InlineKeyboardButton("Entertainment 🎭", callback_data='category_entertainment')],
     ]
     
     # Creates the keyboard markup
@@ -73,17 +83,40 @@ def start(update: Update, context: CallbackContext) -> None:
         reply_markup=reply_markup
     )
 
+def post_category_news(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    category = query.data.split('_')[1]  # Extract category from callback data
+    
+    articles = fetch_category_news(category)[:8]
+    
+    for article in articles:
+        summary = summarize_article(article['url'])
+        if summary is None:
+            continue
+        
+        message_text = f"<b>{article['title']}</b>\n\n{summary} \n\n <a href='{article['url']}'>Read in full here</a>"
+        context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=message_text,
+            parse_mode=ParseMode.HTML
+        )
+
+
 def button_click(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
-    query.answer()
     
-    # Handles button clicks based on the callback data
+    
     if query.data == 'get_news':
-        post_news(update, context)
+        start(update, context)
+    elif query.data.startswith('category_'):
+        post_category_news(update, context)
+
+    query.answer()
+
 
 # Command handler for the '/news' command
 def post_news(update: Update, context: CallbackContext) -> None:
-    articles = fetch_news()[:5]
+    articles = fetch_news()[:10]
     
     for article in articles:   # Iterates through each article and post its title, summary, and source
         summary = summarize_article(article['url'])
@@ -102,7 +135,7 @@ def schedule_post_news(context: CallbackContext) -> None:
     logger.info("Executing schedule_post_news function...")
     job = context.job
     chat_id = 943389924
-    articles = fetch_news()[:5]
+    articles = fetch_news()[:10]
     
     for article in articles:
         summary = summarize_article(article['url'])
@@ -118,7 +151,7 @@ def schedule_post_news(context: CallbackContext) -> None:
         )
 
 if __name__ == '__main__':
-    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
+    updater = Updater(token=TELEGRAM_TOKEN, use_context=True, request_kwargs={'read_timeout': 20, 'connect_timeout': 20})
     dispatcher = updater.dispatcher
     job_queue: JobQueue = updater.job_queue
     chat_id = 943389924
