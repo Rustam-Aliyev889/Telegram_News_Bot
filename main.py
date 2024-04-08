@@ -66,12 +66,7 @@ def start(update: Update, context: CallbackContext) -> None:
         "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
     )
     buttons = [
-        [InlineKeyboardButton("Top News 🇬🇧 ", callback_data='category_general')],
-        [InlineKeyboardButton("Science 🔬", callback_data='category_science')],
-        [InlineKeyboardButton("Technology 💻", callback_data='category_technology')],
-        [InlineKeyboardButton("Health 🏥", callback_data='category_health')],
-        [InlineKeyboardButton("Sport 🏅", callback_data='category_sport')],
-        [InlineKeyboardButton("Entertainment 🎭", callback_data='category_entertainment')],
+        [InlineKeyboardButton("Get News 📰", callback_data='get_news')]
     ]
     
     # Creates the keyboard markup
@@ -82,6 +77,27 @@ def start(update: Update, context: CallbackContext) -> None:
         greeting_message,
         reply_markup=reply_markup
     )
+
+def category_click(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    query.answer()
+    
+    # category buttons
+    category_buttons = [
+        [InlineKeyboardButton("Top News 🇬🇧 ", callback_data='category_general')],
+        [InlineKeyboardButton("Science 🔬", callback_data='category_science')],
+        [InlineKeyboardButton("Technology 💻", callback_data='category_technology')],
+        [InlineKeyboardButton("Health 🏥", callback_data='category_health')],
+        [InlineKeyboardButton("Sport 🏅", callback_data='category_sport')],
+        [InlineKeyboardButton("Entertainment 🎭", callback_data='category_entertainment')],
+    ]
+    
+    # Update the message with category buttons
+    query.message.edit_text(
+        text="Please select a category:",
+        reply_markup=InlineKeyboardMarkup(category_buttons)
+    )
+
 
 def post_category_news(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -105,9 +121,10 @@ def post_category_news(update: Update, context: CallbackContext) -> None:
 def button_click(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     
-    
+    # Handles button clicks based on the callback data
     if query.data == 'get_news':
-        start(update, context)
+        # Call the category_click function to display category buttons
+        category_click(update, context)
     elif query.data.startswith('category_'):
         post_category_news(update, context)
 
