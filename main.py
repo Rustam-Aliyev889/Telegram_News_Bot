@@ -1,5 +1,5 @@
 import nltk
-from telegram import Bot, Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Bot, Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import Updater, CommandHandler, CallbackContext, JobQueue, CallbackQueryHandler
 from newspaper import Article
 import requests
@@ -34,6 +34,18 @@ def fetch_category_news(category):
     data = response.json()
     return data['articles']
 
+def fetch_horoscope(sign):
+    url = f"http://sandipbgt.com/theastrologer/api/horoscope/{sign.lower()}/{'today'}"
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return "Failed to fetch the horoscope. Please try again later."
+    
+    data = response.json()
+    return data['horoscope']
+
+horoscope = fetch_horoscope("aries")
+print(horoscope)
 def summarize_article(url):  # Function to summarize an article given its URL
     article = Article(url)
     try:
@@ -66,7 +78,9 @@ def start(update: Update, context: CallbackContext) -> None:
         "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
     )
     buttons = [
-        [InlineKeyboardButton("Get News 📰", callback_data='get_news')]
+        [InlineKeyboardButton("Get News 📰", callback_data='get_news')],
+        [InlineKeyboardButton("Horoscope 🌟", callback_data='get_horoscope')]
+
     ]
     
     # Creates the keyboard markup
@@ -118,17 +132,78 @@ def post_category_news(update: Update, context: CallbackContext) -> None:
         )
 
 
+def select_sign(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    
+    logger.info(f"Received sign callback: {query.data}")
+    
+    if query.data.startswith('sign_'):  # Checks if the callback data starts with 'sign_'
+        send_horoscope(update, context, query.data.split('_')[1])  
+    else:
+        logger.warning("Invalid sign callback data received")
+
+    sign_keyboard = [
+    [InlineKeyboardButton("Aries ♈", callback_data='sign_aries')],
+    [InlineKeyboardButton("Taurus ♉", callback_data='sign_taurus')],
+    [InlineKeyboardButton("Gemini ♊", callback_data='sign_gemini')],
+    [InlineKeyboardButton("Cancer ♋", callback_data='sign_cancer')],
+    [InlineKeyboardButton("Leo ♌", callback_data='sign_leo')],
+    [InlineKeyboardButton("Virgo ♍", callback_data='sign_virgo')],
+    [InlineKeyboardButton("Libra ♎", callback_data='sign_libra')],
+    [InlineKeyboardButton("Scorpio ♏", callback_data='sign_scorpio')],
+    [InlineKeyboardButton("Sagittarius ♐", callback_data='sign_sagittarius')],
+    [InlineKeyboardButton("Capricorn ♑", callback_data='sign_capricorn')],
+    [InlineKeyboardButton("Aquarius ♒", callback_data='sign_aquarius')],
+    [InlineKeyboardButton("Pisces ♓", callback_data='sign_pisces')],
+]
+    
+    query.message.reply_text(
+        text="Please select your horoscope sign:",
+        reply_markup=InlineKeyboardMarkup(sign_keyboard)
+    )
+    
+    query.answer()
+
+
+
+def send_horoscope(update: Update, context: CallbackContext, callback_data: str) -> None:
+    zodiac_sign = callback_data.split('_')[1].lower()
+    print(f"Inside send_horoscope function")
+    print(f"Zodiac sign: {zodiac_sign}")
+
+    horoscope_text = fetch_horoscope(zodiac_sign)
+    
+    if horoscope_text:
+        message_text = f"Today's Horoscope for {zodiac_sign.capitalize()}:\n\n{horoscope_text}"
+        update.callback_query.answer()
+        update.callback_query.edit_message_text(
+            text=message_text,
+            parse_mode=ParseMode.HTML
+        )
+    else:
+        update.callback_query.answer(text="Sorry, I cannot fetch the horoscope right now.")
+
+
+
+
 def button_click(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     
+    logger.info(f"Received callback query: {query.data}") 
+    
     # Handles button clicks based on the callback data
     if query.data == 'get_news':
-        # Call the category_click function to display category buttons
+        logger.info("Handling get_news callback")
         category_click(update, context)
     elif query.data.startswith('category_'):
+        logger.info("Handling category callback")
         post_category_news(update, context)
-
-    query.answer()
+    elif query.data == 'get_horoscope':
+        logger.info("Handling get_horoscope callback")
+        select_sign(update, context)
+    elif query.data.startswith('sign_'):
+        logger.info("Handling sign callback")
+        send_horoscope(update, context, query.data)
 
 
 # Command handler for the '/news' command
@@ -176,6 +251,7 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('news', post_news))
     dispatcher.add_handler(CallbackQueryHandler(button_click))
+    dispatcher.add_handler(CallbackQueryHandler(send_horoscope))
 
     # Schedule for the news posting job to run at 8:00 AM and 5:00 PM UK time
     london_tz = pytz.timezone('Europe/London')
