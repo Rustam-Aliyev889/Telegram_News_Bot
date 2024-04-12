@@ -6,7 +6,7 @@ import requests
 import configparser
 import logging 
 from datetime import time, timedelta, datetime
-import pytz
+import pytz, telegram.error
 
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -44,8 +44,8 @@ def fetch_horoscope(sign):
     data = response.json()
     return data['horoscope']
 
-horoscope = fetch_horoscope("aries")
-print(horoscope)
+#horoscope = fetch_horoscope("aries")
+#print(horoscope)
 def summarize_article(url):  # Function to summarize an article given its URL
     article = Article(url)
     try:
@@ -73,24 +73,36 @@ def summarize_article(url):  # Function to summarize an article given its URL
     return article.summary
 
 def start(update: Update, context: CallbackContext) -> None:
-    greeting_message = (
-        "Hello! I am your news bot. I can provide you with the latest top news articles.\n\n"
-        "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
-    )
-    buttons = [
-        [InlineKeyboardButton("Get News 📰", callback_data='get_news')],
-        [InlineKeyboardButton("Horoscope 🌟", callback_data='get_horoscope')]
+    max_retries = 3
+    current_attempt = 0
+    retry_delay = 2
 
-    ]
-    
-    # Creates the keyboard markup
-    reply_markup = InlineKeyboardMarkup(buttons)
-    
-    # Sends the greeting message and buttons
-    update.message.reply_text(
-        greeting_message,
-        reply_markup=reply_markup
-    )
+    while current_attempt < max_retries:
+        try:
+            greeting_message = (
+                "Hello! I am your news bot. I can provide you with the latest top news articles.\n\n"
+                "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
+            )
+            buttons = [
+                [InlineKeyboardButton("Get News 📰", callback_data='get_news')],
+                [InlineKeyboardButton("Horoscope 🌟", callback_data='get_horoscope')]
+            ]
+
+            # Creates the keyboard markup
+            reply_markup = InlineKeyboardMarkup(buttons)
+
+            # Sends the greeting message and buttons
+            update.message.reply_text(
+                greeting_message,
+                reply_markup=reply_markup
+            )
+
+            break  # if the message is sent successfully
+
+        except Exception as e:
+            print(f"Error occurred in /start command: {e}")
+            current_attempt += 1  # Increments the attempt counter
+            time(retry_delay) 
 
 def category_click(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -115,7 +127,7 @@ def category_click(update: Update, context: CallbackContext) -> None:
 
 def post_category_news(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
-    category = query.data.split('_')[1]  # Extract category from callback data
+    category = query.data.split('_')[1]
     
     articles = fetch_category_news(category)[:8]
     
@@ -124,12 +136,18 @@ def post_category_news(update: Update, context: CallbackContext) -> None:
         if summary is None:
             continue
         
-        message_text = f"<b>{article['title']}</b>\n\n{summary} \n\n <a href='{article['url']}'>Read in full here</a>"
-        context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text=message_text,
-            parse_mode=ParseMode.HTML
-        )
+        try:
+            message_text = f"{article['title']}\n\n{summary}\n\nRead in full here: {article['url']}"
+            context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=message_text,
+                timeout=10
+            )
+        except telegram.error.BadRequest as e:
+            # Logs the error and skips to the next article
+            logging.error(f"Error sending message for article {article['title']}: {e}")
+            continue
+
 
 
 def select_sign(update: Update, context: CallbackContext) -> None:
@@ -141,6 +159,16 @@ def select_sign(update: Update, context: CallbackContext) -> None:
         send_horoscope(update, context, query.data.split('_')[1])  
     else:
         logger.warning("Invalid sign callback data received")
+
+    if query.message:
+        # Changes the original message to remove the sign_keyboard
+        query.message.edit_text(
+            text="You have selected your horoscope sign. Your horoscope will be sent shortly."
+        )
+    else:
+        logger.warning("No message associated with the callback query.")
+
+    query.answer()
 
     sign_keyboard = [
     [InlineKeyboardButton("Aries ♈", callback_data='sign_aries')],
@@ -161,9 +189,6 @@ def select_sign(update: Update, context: CallbackContext) -> None:
         text="Please select your horoscope sign:",
         reply_markup=InlineKeyboardMarkup(sign_keyboard)
     )
-    
-    query.answer()
-
 
 
 def send_horoscope(update: Update, context: CallbackContext, callback_data: str) -> None:
@@ -182,8 +207,6 @@ def send_horoscope(update: Update, context: CallbackContext, callback_data: str)
         )
     else:
         update.callback_query.answer(text="Sorry, I cannot fetch the horoscope right now.")
-
-
 
 
 def button_click(update: Update, context: CallbackContext) -> None:
