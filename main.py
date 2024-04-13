@@ -80,8 +80,8 @@ def start(update: Update, context: CallbackContext) -> None:
     while current_attempt < max_retries:
         try:
             greeting_message = (
-                "Hello! I am your news bot. I can provide you with the latest top news articles.\n\n"
-                "This bot fetches the latest top news articles from various sources and provides summaries for easy reading."
+                "Hello! 📰🔍 Looking for a quick news fix? \n\n"
+                "I'm here to deliver the latest headlines with a sprinkle of summary magic, making it easy for you to stay informed."
             )
             buttons = [
                 [InlineKeyboardButton("Get News 📰", callback_data='get_news')],
@@ -120,7 +120,7 @@ def category_click(update: Update, context: CallbackContext) -> None:
     
     # Update the message with category buttons
     query.message.edit_text(
-        text="Please select a category:",
+        text="Explore news categories: 🗞️🔎 Which category of news would you like to explore?",
         reply_markup=InlineKeyboardMarkup(category_buttons)
     )
 
@@ -163,7 +163,7 @@ def select_sign(update: Update, context: CallbackContext) -> None:
     if query.message:
         # Changes the original message to remove the sign_keyboard
         query.message.edit_text(
-            text="You have selected your horoscope sign. Your horoscope will be sent shortly."
+            text="Your cosmic secrets are about to be revealed! 🌌"
         )
     else:
         logger.warning("No message associated with the callback query.")
