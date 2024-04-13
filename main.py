@@ -147,7 +147,9 @@ def post_category_news(update: Update, context: CallbackContext) -> None:
             # Logs the error and skips to the next article
             logging.error(f"Error sending message for article {article['title']}: {e}")
             continue
-
+    
+    # To hide the category buttons
+    query.message.edit_reply_markup(reply_markup=None)
 
 
 def select_sign(update: Update, context: CallbackContext) -> None:
