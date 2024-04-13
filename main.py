@@ -197,9 +197,22 @@ def send_horoscope(update: Update, context: CallbackContext, callback_data: str)
     print(f"Zodiac sign: {zodiac_sign}")
 
     horoscope_text = fetch_horoscope(zodiac_sign)
-    
+    sign_emojis = {
+        "aries": "🐏",
+        "taurus": "🐂",
+        "gemini": "👯‍♂️",
+        "cancer": "🦀",
+        "leo": "🦁",
+        "virgo": "🍂",
+        "libra": "⚖️",
+        "scorpio": "🦂",
+        "sagittarius": "🏹",
+        "capricorn": "🐐",
+        "aquarius": "🌊",
+        "pisces": "🐟"
+    }
     if horoscope_text:
-        message_text = f"Today's Horoscope for {zodiac_sign.capitalize()}:\n\n{horoscope_text}"
+        message_text = f"Today's Horoscope for {zodiac_sign.capitalize()} {sign_emojis[zodiac_sign]} :\n\n{horoscope_text}"
         update.callback_query.answer()
         update.callback_query.edit_message_text(
             text=message_text,
