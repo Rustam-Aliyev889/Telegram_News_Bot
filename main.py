@@ -292,7 +292,6 @@ def schedule_post_news(context: CallbackContext) -> None:
             parse_mode=ParseMode.HTML,
             timeout=60
         )
-    start()
 
 if __name__ == '__main__':
     updater = Updater(token=TELEGRAM_TOKEN, use_context=True, request_kwargs={'read_timeout': 20, 'connect_timeout': 20})
@@ -307,7 +306,7 @@ if __name__ == '__main__':
 
     # Schedule for the news posting job to run at 8:00 AM and 5:00 PM UK time
     london_tz = pytz.timezone('Europe/London')
-    job_queue.run_daily(schedule_post_news, time(hour=13, minute=10, tzinfo=london_tz), context=chat_id)
+    job_queue.run_daily(schedule_post_news, time(hour=8, minute=00, tzinfo=london_tz), context=chat_id)
     job_queue.run_daily(schedule_post_news, time(hour=17, minute=00, tzinfo=london_tz), context=chat_id)
     
     updater.start_polling()
