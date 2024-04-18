@@ -7,6 +7,7 @@ import configparser
 import logging 
 from datetime import time, timedelta, datetime
 import pytz, telegram.error
+import os
 
 # Setting up logging configuration for troubleshooting
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -15,11 +16,15 @@ logger = logging.getLogger(__name__)
 
 nltk.download('punkt')   # tokenizer for splitting text into individual sentences
 
-config = configparser.ConfigParser()   # Configuration file
-config.read('config.ini')
 
-NEWS_API_KEY = config['DEFAULT']['NEWS_API_KEY']
-TELEGRAM_TOKEN = config['DEFAULT']['TELEGRAM_TOKEN']
+NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+
+#config = configparser.ConfigParser()   # Configuration file
+#config.read('config.ini')
+
+#NEWS_API_KEY = config['DEFAULT']['NEWS_API_KEY']
+#TELEGRAM_TOKEN = config['DEFAULT']['TELEGRAM_TOKEN']
 
 # Gets news for NewsApi
 def fetch_news():
