@@ -96,11 +96,18 @@ def start(update: Update, context: CallbackContext) -> None:
             reply_markup = InlineKeyboardMarkup(buttons)
 
             # Sends the greeting message and buttons
-            update.message.reply_text(
-                greeting_message,
-                reply_markup=reply_markup
-            )
-
+            if update.message:
+                update.message.reply_text(
+                    greeting_message,
+                    reply_markup=reply_markup
+                )
+            elif update.callback_query:
+                update.callback_query.message.reply_text(
+                    greeting_message,
+                    reply_markup=reply_markup
+                )
+            else:
+                logger.warning("Cannot determine the type of update.")
             break  # if the message is sent successfully
 
         except Exception as e:
@@ -155,7 +162,7 @@ def post_category_news(update: Update, context: CallbackContext) -> None:
     
     # To hide the category buttons
     query.message.edit_reply_markup(reply_markup=None)
-
+    start(update, context)
 
 def select_sign(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -228,6 +235,7 @@ def send_horoscope(update: Update, context: CallbackContext, callback_data: str)
     else:
         update.callback_query.answer(text="Sorry, I cannot fetch the horoscope right now.")
 
+    start(update, context)
 
 def button_click(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -284,7 +292,7 @@ def schedule_post_news(context: CallbackContext) -> None:
             parse_mode=ParseMode.HTML,
             timeout=60
         )
-
+    start()
 
 if __name__ == '__main__':
     updater = Updater(token=TELEGRAM_TOKEN, use_context=True, request_kwargs={'read_timeout': 20, 'connect_timeout': 20})
@@ -299,7 +307,7 @@ if __name__ == '__main__':
 
     # Schedule for the news posting job to run at 8:00 AM and 5:00 PM UK time
     london_tz = pytz.timezone('Europe/London')
-    job_queue.run_daily(schedule_post_news, time(hour=8, minute=00, tzinfo=london_tz), context=chat_id)
+    job_queue.run_daily(schedule_post_news, time(hour=13, minute=10, tzinfo=london_tz), context=chat_id)
     job_queue.run_daily(schedule_post_news, time(hour=17, minute=00, tzinfo=london_tz), context=chat_id)
     
     updater.start_polling()
