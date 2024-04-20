@@ -9,7 +9,7 @@ Ever felt bored sifting through news articles? I know the struggle! Ads popping 
 
 ## DEMO
 
-<img src="https://github.com/Rustam-Aliyev889/Telegram_News_Bot/blob/main/Demo.mp4" alt="Jolt demo" height="450" align="center">
+<img src="demo.gif" alt="Jolt demo" height="450" align="center">
 
 ## Features
 
